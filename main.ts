@@ -1,5 +1,5 @@
 import * as ts from "./TypeScript-fixInferUsage/built/local/typescript"
-import * as DefaultTs from "./TypeScript/built/local/typescript"
+//import * as DefaultTs from "./TypeScript/built/local/typescript"
 
 
 export function createProgramFromSource(sourceCode: string, fname: string = "dummy.ts"): [ts.Program, ts.TypeChecker, ts.SourceFile] {
@@ -21,10 +21,9 @@ export function inferAllFunctionParams(
     source: ts.SourceFile,
     program: ts.Program,
     typeChecker: ts.TypeChecker,
-    modified: boolean = true
 ) {
     const acc: ts.codefix.ParameterInference[][] = []
-    inferAllParamsWorker(source, source, program, typeChecker, acc, modified)
+    inferAllParamsWorker(source, source, program, typeChecker, acc)
 
     return acc
 }
@@ -45,21 +44,25 @@ function inferAllParamsWorker(
     program: ts.Program,
     typeChecker: ts.TypeChecker,
     acc: ts.codefix.ParameterInference[][],
-    modified: boolean
 ) {
     switch (node.kind) {
         case ts.SyntaxKind.FunctionDeclaration:
             if (someParamIsUndefined(node as ts.FunctionDeclaration, typeChecker))
-                acc.push(inferParameters(source, node as ts.FunctionDeclaration, program, modified))
+                acc.push(inferParameters(source, node as ts.FunctionDeclaration, program))
     }
 
-    node.getChildren().forEach((child) => inferAllParamsWorker(source, child, program, typeChecker, acc, modified))
+    node.getChildren().forEach((child) => inferAllParamsWorker(source, child, program, typeChecker, acc))
 
 }
 
 
 
 
+
+export function print(node: ts.Node) {
+    console.log(`kind: ${node.kind}: ${node.getText()}`)
+    ts.forEachChild(node, print)
+}
 
 
 
@@ -71,14 +74,12 @@ function inferAllParamsWorker(
 function inferParameters(source: ts.SourceFile, 
     functionDeclaration: ts.FunctionDeclaration,
     program: ts.Program,
-    modified: boolean
 ): ts.codefix.ParameterInference[] 
 {
-    if (modified)
-        return ts.codefix.inferTypesForParameters(functionDeclaration, source, program)
-
     
-    return DefaultTs.codefix.inferTypesForParameters(functionDeclaration as DefaultTs.FunctionDeclaration, source as DefaultTs.SourceFile, program as DefaultTs.Program) as ts.codefix.ParameterInference[] 
+    return ts.codefix.inferLeafFunction(functionDeclaration, source, program)
+
+    //return DefaultTs.codefix.inferTypesForParameters(functionDeclaration as DefaultTs.FunctionDeclaration, source as DefaultTs.SourceFile, program as DefaultTs.Program) as ts.codefix.ParameterInference[] 
 }
 
 
